@@ -202,6 +202,12 @@ client subscribes again can also lose its first updates, with no error
 A processed stream with a `from_slot` or a `RuntimeHandle` does not reconnect,
 so run it under a supervisor that restarts it.
 
+**Keepalive.** A connection that goes half-open (a dropped route, an expired NAT
+entry) sends no error, so a stream would wait forever and never reconnect. The
+source sends an HTTP/2 and TCP keepalive ping after 30 idle seconds and closes the
+connection when no answer comes in 10 seconds. That ends the stream, which then
+reconnects as above.
+
 ## Banks at processed
 
 At processed, a slot can have more than one bank, and each update carries its
