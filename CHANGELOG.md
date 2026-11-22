@@ -7,6 +7,10 @@ and adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `shipstern-spl-token-extensions-parser`: parses the Token-2022 scaled UI amount (`ScaledUiAmountExtension`) instructions, initialize and update multiplier, as the `TokenExtensionProgram` oneof variant `scaled_ui_amount`. Before, they failed with a parse error ([#414](https://github.com/solana-rpc/shipstern/pull/414) by @Estereg).
+
 ### Changed
 
 - **Breaking** `shipstern-proc-macro` and the instruction parser crates: instruction parsers select their program with `transaction_accounts_include`, not `transaction_accounts`. The runtime merges all instruction parsers into one filter, so it received only transactions that touched every program. Include keys merged into `InstructionPipeline::ID` now widen it ([#395](https://github.com/solana-rpc/shipstern/pull/395), from #340 by @hack-wrench and @senzenn).
