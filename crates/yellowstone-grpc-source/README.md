@@ -206,7 +206,8 @@ so run it under a supervisor that restarts it.
 entry) sends no error, so a stream would wait forever and never reconnect. The
 source sends an HTTP/2 and TCP keepalive ping after 30 idle seconds and closes the
 connection when no answer comes in 10 seconds. That ends the stream, which then
-reconnects as above.
+reconnects as above when the reconnect mode allows it; a processed stream with a
+`from_slot` or a `RuntimeHandle` ends the run instead.
 
 ## Banks at processed
 
