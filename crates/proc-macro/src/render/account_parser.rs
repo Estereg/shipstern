@@ -4,15 +4,20 @@ use codama_nodes::{
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
-/// A fixed-size byte field discriminator with a bytes default, at `offset`.
+/// A field discriminator at `offset`: fixed-size bytes with a bytes default (Anchor)
+/// or a number with a number default (Shank, e.g. a `u8` key).
 pub(crate) struct FieldDiscriminator {
     pub(crate) offset: usize,
     pub(crate) size: usize,
     pub(crate) bytes: Vec<u8>,
+    /// Where the account struct starts in the data: after the field when the field is
+    /// omitted from the struct, else at 0.
+    pub(crate) body_start: usize,
 }
 
-/// `None` when the account's field discriminator is not a fixed-size bytes field
-/// with a bytes default, which the parser skips.
+/// `None` when the account's field discriminator is neither a fixed-size bytes field
+/// with a bytes default nor a number field with an unsigned number default, which the
+/// parser skips.
 pub(crate) fn field_discriminator(
     account: &codama_nodes::AccountNode,
     node: &codama_nodes::FieldDiscriminatorNode,
@@ -22,18 +27,40 @@ pub(crate) fn field_discriminator(
     };
 
     let field = struct_node.fields.iter().find(|f| f.name == node.name)?;
-    let TypeNode::FixedSize(fixed_size_node) = &*field.r#type else {
-        return None;
+
+    let (size, bytes) = match (&*field.r#type, field.default_value.as_ref()) {
+        (TypeNode::FixedSize(fixed), Some(ValueNode::Bytes(bytes))) => {
+            (fixed.size, crate::utils::decode_discriminator_bytes(bytes))
+        },
+
+        (ty @ TypeNode::Number(_), Some(ValueNode::Number(nn))) => {
+            let Number::UnsignedInteger(value) = nn.number else {
+                return None;
+            };
+
+            let bytes = super::instruction_parser::number_discriminator_bytes(ty, value);
+
+            (bytes.len(), bytes)
+        },
+
+        _ => return None,
     };
 
-    let ValueNode::Bytes(bytes) = (*field.default_value).as_ref()? else {
-        return None;
-    };
+    let offset = crate::utils::as_index(node.offset);
+
+    // An omitted field is not in the account struct, so the struct starts after it.
+    let body_start =
+        if field.default_value_strategy == Some(codama_nodes::DefaultValueStrategy::Omitted) {
+            offset + size
+        } else {
+            0
+        };
 
     Some(FieldDiscriminator {
-        offset: crate::utils::as_index(node.offset),
-        size: fixed_size_node.size,
-        bytes: crate::utils::decode_discriminator_bytes(bytes),
+        offset,
+        size,
+        bytes,
+        body_start,
     })
 }
 
@@ -234,10 +261,13 @@ pub fn account_parser(
                     offset: offset_at,
                     size,
                     bytes: discriminator,
+                    body_start,
                 } = field_discriminator(account, node)?;
 
                 let offset = crate::utils::unsuffixed(offset_at as u64);
                 let end = crate::utils::unsuffixed((offset_at + size) as u64);
+
+                let body_start = crate::utils::unsuffixed(body_start as u64);
 
                 // Empty discriminator (size 0) matches any data — skip the
                 // byte comparison and match unconditionally on data length.
@@ -250,7 +280,7 @@ pub fn account_parser(
                 let arm = quote! {
                     if let Some(slice) = data.get(#offset..#end) {
                         if #disc_check {
-                            match <#account_ident as ::borsh::BorshDeserialize>::deserialize(&mut &data[#end..]) {
+                            match <#account_ident as ::borsh::BorshDeserialize>::deserialize(&mut &data[#body_start..]) {
                                 Ok(parsed) => {
                                     return Ok(#account_struct_ident {
                                         account: #account_mod_ident::Account::#account_ident(parsed),
