@@ -50,6 +50,7 @@ and adheres to [Semantic Versioning](https://semver.org/).
 - `shipstern-kafka-sink`: the sinks run the blocking librdkafka transaction calls (`init`, `begin`, `commit` and `abort`; `init`, `commit` and `abort` block up to `transaction_timeout_ms`, and `begin` is moved too) on the blocking thread pool. Before, each one held a Tokio worker for its whole timeout, which stalled other tasks on that worker during a slow commit ([#427](https://github.com/solana-rpc/shipstern/pull/427) by @Estereg).
 - `shipstern`: the `_successful` metrics no longer count an update a parser filtered out, so `shipstern_instructions_successful`, `shipstern_transactions_successful` and the other kinds count only updates a parser parsed and its handlers ran ([#428](https://github.com/solana-rpc/shipstern/pull/428) by @Estereg).
 - `shipstern-solana-snapshot-source`: a `channel_size` of 0 returns a config error instead of panicking ([#431](https://github.com/solana-rpc/shipstern/pull/431) by @Estereg).
+- `shipstern-solana-snapshot-source`: the bank load no longer holds a runtime worker for its minutes of blocking work ([#432](https://github.com/solana-rpc/shipstern/pull/432) by @Estereg).
 
 ## [0.13.0] - 2026-11-12
 
