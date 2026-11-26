@@ -6440,6 +6440,7 @@ dependencies = [
  "async-trait",
  "clap",
  "serde",
+ "serde_json",
  "shipstern",
  "shipstern-core",
  "solana-account-decoder-client-types",
