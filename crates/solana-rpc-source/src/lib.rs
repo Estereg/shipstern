@@ -44,7 +44,7 @@ pub struct SolanaAccountsRpcConfig {
     /// The endpoint of the RPC server.
     #[arg(long, env)]
     pub endpoint: String,
-    /// The timeout for the connection.
+    /// Seconds for each RPC request. `0` is refused at connect.
     #[arg(long, env)]
     pub timeout: u64,
 
@@ -52,6 +52,8 @@ pub struct SolanaAccountsRpcConfig {
     #[arg(long, env)]
     pub commitment_level: Option<CommitmentLevel>,
 }
+
+const ZERO_TIMEOUT: &str = "the timeout is 0 seconds, it must be at least 1";
 
 impl SolanaAccountsRpcSource {
     fn get_commitment_config(&self) -> CommitmentConfig {
@@ -266,6 +268,12 @@ impl SourceTrait for SolanaAccountsRpcSource {
         let SourceContext { filters, tx, .. } = ctx;
         let config = &self.config;
 
+        // A zero timeout fails every request that does not answer at once, as "error sending
+        // request" with no word of the timeout.
+        if config.timeout == 0 {
+            return Err(ShipsternError::Other(ZERO_TIMEOUT.into()));
+        }
+
         let mut tasks_set = JoinSet::new();
 
         for (filter_id, prefilter) in &filters.parsers_filters {
@@ -445,7 +453,32 @@ mod tests {
     };
     use yellowstone_grpc_proto::geyser::subscribe_update::UpdateOneof;
 
-    use super::{SolanaAccountsRpcConfig, SolanaAccountsRpcSource};
+    use super::{SolanaAccountsRpcConfig, SolanaAccountsRpcSource, ZERO_TIMEOUT};
+
+    /// A zero timeout is refused before any request, not reported as a failed send.
+    #[tokio::test]
+    async fn a_zero_timeout_is_refused() {
+        let filters = Filters::new(HashMap::from([(
+            "test-filter".to_string(),
+            Prefilter::builder()
+                .account_owners([[1_u8; 32]])
+                .build()
+                .expect("account owner filter should build"),
+        )]));
+        let source = SolanaAccountsRpcSource::from_config(SolanaAccountsRpcConfig {
+            endpoint: "http://127.0.0.1:9".to_string(),
+            timeout: 0,
+            commitment_level: None,
+        });
+        let (tx, _rx) = mpsc::channel(1);
+
+        let result = source.connect(SourceContext::new(filters, tx)).await;
+
+        let Err(shipstern::Error::Other(err)) = result else {
+            panic!("expected a config error, got {result:?}");
+        };
+        assert_eq!(err.to_string(), ZERO_TIMEOUT);
+    }
 
     #[test]
     fn client_filters_match_the_server_rules() {
