@@ -160,6 +160,8 @@ pub struct ConfigureAccountWithRegistryAccounts {
     pub account: Pubkey,
     pub mint: Pubkey,
     pub registry: Pubkey,
+    pub payer: Option<Pubkey>,
+    pub system_program: Option<Pubkey>,
 }
 
 #[shipstern]
@@ -547,7 +549,7 @@ impl ExtensionInstructionParser for ConfidentialTransferIx {
             },
 
             SplConfidentialTransferInstruction::ConfigureAccountWithRegistry => {
-                check_min_accounts_req(accounts_len, 4)?;
+                check_min_accounts_req(accounts_len, 3)?;
 
                 oneof::Instruction::ConfigureAccountWithRegistry(
                     oneof::ConfigureAccountWithRegistry {
@@ -555,6 +557,8 @@ impl ExtensionInstructionParser for ConfidentialTransferIx {
                             account: crate::Pubkey::new(ix.accounts[0].0),
                             mint: crate::Pubkey::new(ix.accounts[1].0),
                             registry: crate::Pubkey::new(ix.accounts[2].0),
+                            payer: ix.accounts.get(3).map(|a| crate::Pubkey::new(a.0)),
+                            system_program: ix.accounts.get(4).map(|a| crate::Pubkey::new(a.0)),
                         },
                     },
                 )
@@ -820,5 +824,55 @@ mod tests {
     fn transfer_with_fee_without_the_owner_account_is_rejected() {
         assert!(parse_transfer_with_fee([1, 2, 3, 4, 5], &[1, 2, 3, 4]).is_err());
         assert!(parse_transfer_with_fee([0; 5], &[1, 2, 3, 4, 5, 6, 7, 8]).is_err());
+    }
+
+    fn parse_configure_with_registry(
+        accounts: &[u8],
+    ) -> Result<ConfigureAccountWithRegistryAccounts> {
+        let mut data = TokenInstruction::ConfidentialTransferExtension.pack();
+        data.push(ConfidentialTransferInstruction::ConfigureAccountWithRegistry.into());
+
+        let ix = InstructionUpdate {
+            program: Pubkey::new(spl_token_2022::ID.to_bytes()),
+            accounts: accounts.iter().map(|n| pk(*n)).collect(),
+            data,
+            shared: Default::default(),
+            inner: vec![],
+            path: Path::new_single(0),
+            log_range: 0..0,
+        };
+
+        let Some(oneof::Instruction::ConfigureAccountWithRegistry(c)) =
+            ConfidentialTransferIx::try_parse(&ix)?.instruction
+        else {
+            panic!("expected ConfigureAccountWithRegistry");
+        };
+
+        Ok(c.accounts)
+    }
+
+    #[test]
+    fn configure_with_registry_parses_without_payer_and_system_program() {
+        let a = parse_configure_with_registry(&[1, 2, 3]).unwrap();
+
+        assert_eq!(a.account, pk(1));
+        assert_eq!(a.mint, pk(2));
+        assert_eq!(a.registry, pk(3));
+        assert_eq!(a.payer, None);
+        assert_eq!(a.system_program, None);
+    }
+
+    #[test]
+    fn configure_with_registry_reads_the_payer_and_system_program_for_reallocation() {
+        let a = parse_configure_with_registry(&[1, 2, 3, 4, 5]).unwrap();
+
+        assert_eq!(a.registry, pk(3));
+        assert_eq!(a.payer, Some(pk(4)));
+        assert_eq!(a.system_program, Some(pk(5)));
+    }
+
+    #[test]
+    fn configure_with_registry_without_the_registry_is_rejected() {
+        assert!(parse_configure_with_registry(&[1, 2]).is_err());
     }
 }
