@@ -79,6 +79,9 @@ impl SourceTrait for PreconfSource {
         if feeds.is_empty() {
             return Err(ConnectError::NoRegion.into());
         }
+        if config.timeout == 0 {
+            return Err(ConnectError::ZeroTimeout.into());
+        }
 
         // The feed refuses a request it cannot serve, so name the parser before the dial.
         let transactions = filter::transactions(&filters)?;
@@ -608,6 +611,25 @@ mod tests {
         };
         assert!(
             matches!(err.downcast_ref(), Some(ConnectError::NoRegion)),
+            "{err}"
+        );
+    }
+
+    /// A zero timeout fails before the dial, not as a subscribe that did not answer.
+    #[tokio::test]
+    async fn a_zero_timeout_is_refused() {
+        let source = PreconfSource::from_config(PreconfConfig {
+            timeout: 0,
+            ..config(vec![HarmonicRegion::Fra], vec![])
+        });
+
+        let result = connect(source, filters()).await;
+
+        let Err(shipstern::Error::Other(err)) = result else {
+            panic!("expected a timeout error, got {result:?}");
+        };
+        assert!(
+            matches!(err.downcast_ref(), Some(ConnectError::ZeroTimeout)),
             "{err}"
         );
     }
