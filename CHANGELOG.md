@@ -25,6 +25,7 @@ and adheres to [Semantic Versioning](https://semver.org/).
 - `shipstern-solana-snapshot-source`: a stopped runtime ends the scan and the source returns `ReceiverDropped`. It used to log one error per account, finish the scan, and report `Completed` ([#403](https://github.com/solana-rpc/shipstern/pull/403) by @Estereg).
 - `shipstern`: `shipstern_transactions_successful` no longer counts the instruction pipelines a second time for a transaction whose instructions all succeed. Instruction pipelines count only in the `shipstern_instructions_*` metrics, and a failure to build a transaction's instruction tree now counts in `shipstern_instructions_parsing_errors` instead of `shipstern_transactions_parsing_errors` ([#405](https://github.com/solana-rpc/shipstern/pull/405) by @Estereg).
 - `shipstern-kafka-sink`: a slot with more records than free room in the producer queue (`queue.buffering.max.messages`), or a slow broker, no longer fails the slot with `QueueFull` and ends the sink after the write retries. The sink now waits up to `message_timeout_ms` for queue space. It still enqueues records one at a time in order, so partition order holds ([#406](https://github.com/solana-rpc/shipstern/pull/406) by @Estereg).
+- `shipstern-core`: `KeyBytes` and `Pubkey` deserialize from owned strings, so `serde_json::from_value`, TOML strings with escapes and `#[serde(flatten)]` structs no longer fail with "expected a borrowed string" ([#407](https://github.com/solana-rpc/shipstern/pull/407) by @Estereg).
 
 ## [0.13.0] - 2026-11-12
 
