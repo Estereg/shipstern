@@ -51,6 +51,7 @@ and adheres to [Semantic Versioning](https://semver.org/).
 - `shipstern`: the `_successful` metrics no longer count an update a parser filtered out, so `shipstern_instructions_successful`, `shipstern_transactions_successful` and the other kinds count only updates a parser parsed and its handlers ran ([#428](https://github.com/solana-rpc/shipstern/pull/428) by @Estereg).
 - `shipstern-solana-snapshot-source`: a `channel_size` of 0 returns a config error instead of panicking ([#431](https://github.com/solana-rpc/shipstern/pull/431) by @Estereg).
 - `shipstern-solana-snapshot-source`: the bank load no longer holds a runtime worker for its minutes of blocking work ([#432](https://github.com/solana-rpc/shipstern/pull/432) by @Estereg).
+- `shipstern-jetstream-source`: a stopped runtime stops the replay and the source returns `ReceiverDropped`. The firehose retries a failed callback with no limit, so a closed channel kept it downloading and `connect` never returned ([#433](https://github.com/solana-rpc/shipstern/pull/433) by @Estereg).
 
 ## [0.13.0] - 2026-11-12
 
