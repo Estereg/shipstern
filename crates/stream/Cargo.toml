@@ -37,4 +37,4 @@ default = []
 prometheus = ["dep:prometheus", "shipstern/prometheus"]
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["macros"] }
+tokio = { workspace = true, features = ["macros", "time"] }
