@@ -85,8 +85,11 @@ impl ProgramStreams for Service {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
+        // A program listed twice must still send each update only once.
+        let mut seen = std::collections::HashSet::new();
         let rxs: Vec<_> = pubkeys
             .iter()
+            .filter(|key| seen.insert(*key))
             .filter_map(|key| self.0.get(key))
             .flatten()
             .collect();
@@ -219,5 +222,29 @@ mod tests {
             .await
             .expect("server should fail to bind quickly");
         assert!(matches!(res, Err(Error::Transport(_))));
+    }
+
+    #[tokio::test]
+    async fn subscribe_many_sends_each_update_once_for_a_repeated_program() {
+        let (tx, rx) = broadcast::channel(4);
+        let channels = Channels::from([(PROGRAM.parse().unwrap(), Box::from([rx]))]);
+
+        let stream = Service(channels)
+            .subscribe_many(Request::new(SubscribeManyRequest {
+                programs: vec![PROGRAM.into(), PROGRAM.into()],
+            }))
+            .await
+            .unwrap()
+            .into_inner();
+
+        tx.send(Any {
+            type_url: "test".into(),
+            value: vec![1],
+        })
+        .unwrap();
+        drop(tx);
+
+        let updates: Vec<_> = stream.collect().await;
+        assert_eq!(updates.len(), 1);
     }
 }
