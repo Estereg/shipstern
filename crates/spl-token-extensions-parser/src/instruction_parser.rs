@@ -536,4 +536,26 @@ mod tests {
         assert_eq!(w.accounts.source_accounts, vec![pk(6), pk(7)]);
         assert_eq!(w.args.num_token_accounts, 5);
     }
+
+    #[tokio::test]
+    async fn harvest_withheld_tokens_lists_every_source_account() {
+        use crate::extensions::transfer_fee_instruction::Instruction as Ix;
+
+        let ix =
+            spl_token_2022::extension::transfer_fee::instruction::harvest_withheld_tokens_to_mint(
+                &spl_token_2022::ID,
+                &key(1),
+                &[&key(2), &key(3), &key(4)],
+            )
+            .unwrap();
+
+        let parsed = InstructionParser.parse(&update_from(&ix)).await.unwrap();
+
+        let Ix::HarvestWithheldTokensToMint(h) = transfer_fee_ix(parsed) else {
+            panic!("expected HarvestWithheldTokensToMint");
+        };
+
+        assert_eq!(h.accounts.mint, pk(1));
+        assert_eq!(h.accounts.source_accounts, vec![pk(2), pk(3), pk(4)]);
+    }
 }
