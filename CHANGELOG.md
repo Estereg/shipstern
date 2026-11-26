@@ -27,6 +27,7 @@ and adheres to [Semantic Versioning](https://semver.org/).
 - `shipstern-kafka-sink`: a slot with more records than free room in the producer queue (`queue.buffering.max.messages`), or a slow broker, no longer fails the slot with `QueueFull` and ends the sink after the write retries. The sink now waits up to `message_timeout_ms` for queue space. It still enqueues records one at a time in order, so partition order holds ([#406](https://github.com/solana-rpc/shipstern/pull/406) by @Estereg).
 - `shipstern-core`: `KeyBytes` and `Pubkey` deserialize from owned strings, so `serde_json::from_value`, TOML strings with escapes and `#[serde(flatten)]` structs no longer fail with "expected a borrowed string" ([#407](https://github.com/solana-rpc/shipstern/pull/407) by @Estereg).
 - `shipstern-yellowstone-grpc-source`: a confirmed or finalized stream resumes on `DataLoss`, which the server can send to a client that lags ([#408](https://github.com/solana-rpc/shipstern/pull/408) by @Estereg).
+- `shipstern-yellowstone-grpc-source`: a stream in every mode stops when the runtime has stopped, also during a connect, a reconnect wait or a quiet stream. Before, it noticed only at its next send and kept the connection open ([#409](https://github.com/solana-rpc/shipstern/pull/409) by @Estereg).
 
 ## [0.13.0] - 2026-11-12
 
