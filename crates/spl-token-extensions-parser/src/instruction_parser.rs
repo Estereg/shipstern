@@ -12,7 +12,8 @@ use spl_token_metadata_interface::instruction::TokenMetadataInstruction as SplTo
 use crate::{
     extensions::{
         CommonExtensionInstructions, ConfidentialTransferFeeIx, ConfidentialTransferIx,
-        ExtensionWithCommonInstruction, TokenGroupIx, TokenMetadataIx, TransferFeeIx,
+        ExtensionWithCommonInstruction, ScaledUiAmountIx, TokenGroupIx, TokenMetadataIx,
+        TransferFeeIx,
     },
     instructions::{
         CreateNativeMintAccounts, InitializeMintCloseAuthorityAccounts,
@@ -206,6 +207,16 @@ impl InstructionParser {
 
                     Ok(envelope!(crate::instruction::Instruction::TransferHook(
                         crate::instruction::TransferHook {
+                            instruction: Some(parsed),
+                        },
+                    )))
+                },
+
+                SplTokenInstruction::ScaledUiAmountExtension => {
+                    let parsed = ScaledUiAmountIx::try_parse(ix)?;
+
+                    Ok(envelope!(crate::instruction::Instruction::ScaledUiAmount(
+                        crate::instruction::ScaledUiAmount {
                             instruction: Some(parsed),
                         },
                     )))
@@ -557,5 +568,61 @@ mod tests {
 
         assert_eq!(h.accounts.mint, pk(1));
         assert_eq!(h.accounts.source_accounts, vec![pk(2), pk(3), pk(4)]);
+    }
+
+    #[tokio::test]
+    async fn scaled_ui_amount_instructions_parse() {
+        use crate::extensions::scaled_ui_amount_instruction::Instruction as Ix;
+
+        let init = spl_token_2022::extension::scaled_ui_amount::instruction::initialize(
+            &spl_token_2022::ID,
+            &key(1),
+            Some(key(2)),
+            1.5,
+        )
+        .unwrap();
+        let update = spl_token_2022::extension::scaled_ui_amount::instruction::update_multiplier(
+            &spl_token_2022::ID,
+            &key(1),
+            &key(2),
+            &[&key(3)],
+            2.5,
+            1_700_000_000,
+        )
+        .unwrap();
+
+        let Some(crate::instruction::Instruction::ScaledUiAmount(init)) = InstructionParser
+            .parse(&update_from(&init))
+            .await
+            .unwrap()
+            .instruction
+        else {
+            panic!("expected ScaledUiAmount");
+        };
+        let Some(Ix::Initialize(init)) = init.instruction.and_then(|i| i.instruction) else {
+            panic!("expected Initialize");
+        };
+
+        assert_eq!(init.accounts.mint, pk(1));
+        assert_eq!(init.args.authority, Some(pk(2)));
+        assert_eq!(init.args.multiplier, 1.5);
+
+        let Some(crate::instruction::Instruction::ScaledUiAmount(update)) = InstructionParser
+            .parse(&update_from(&update))
+            .await
+            .unwrap()
+            .instruction
+        else {
+            panic!("expected ScaledUiAmount");
+        };
+        let Some(Ix::UpdateMultiplier(update)) = update.instruction.and_then(|i| i.instruction)
+        else {
+            panic!("expected UpdateMultiplier");
+        };
+
+        assert_eq!(update.accounts.authority, pk(2));
+        assert_eq!(update.accounts.multisig_signers, vec![pk(3)]);
+        assert_eq!(update.args.multiplier, 2.5);
+        assert_eq!(update.args.effective_timestamp, 1_700_000_000);
     }
 }
