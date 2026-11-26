@@ -6086,7 +6086,9 @@ dependencies = [
  "shipstern-parser",
  "shipstern-proc-macro",
  "shipstern-proto",
+ "solana-instruction 3.5.1",
  "solana-loader-v3-interface",
+ "solana-pubkey 4.4.0",
  "solana-sdk-ids",
 ]
 

@@ -20,6 +20,10 @@ shipstern-proto = { workspace = true, features = [
   "parser",
 ], optional = true }
 
+[dev-dependencies]
+solana-instruction = { workspace = true }
+solana-pubkey = { workspace = true }
+
 [features]
 default = ["proto"]
 proto = [
