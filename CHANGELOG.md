@@ -16,6 +16,7 @@ and adheres to [Semantic Versioning](https://semver.org/).
 
 - `shipstern`: a `FilterPipeline` transaction include replaces the parser's program key, and the user's exclude, vote and signature values now apply; `Prefilter::merge` dropped them. A broad include key such as wSOL makes the server send more transactions ([#395](https://github.com/solana-rpc/shipstern/pull/395) by @senzenn).
 - `shipstern-yellowstone-grpc-source` and `shipstern-block-coordinator`'s `CoordinatorSource`: the client sends an HTTP/2 keepalive ping every 30 idle seconds and closes a connection that does not answer it in 10 seconds, and TCP keepalive starts probing after 30 idle seconds. Before, a half-open connection left the stream waiting forever, with no reconnect and no error ([#397](https://github.com/solana-rpc/shipstern/pull/397) by @Estereg).
+- `shipstern-proc-macro`: an IDL whose instruction, account or event names fold to the same generated identifier (`ABC` and `Abc`, or `_abc` and `abc`) now fails at expansion with a `compile_error!` naming both entries, instead of duplicate-definition errors inside generated code ([#398](https://github.com/solana-rpc/shipstern/pull/398) closing [#297](https://github.com/solana-rpc/shipstern/issues/297) by @Estereg).
 
 ## [0.13.0] - 2026-11-12
 
