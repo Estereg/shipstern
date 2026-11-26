@@ -23,6 +23,7 @@ and adheres to [Semantic Versioning](https://semver.org/).
 - `shipstern-stream`: a client that falls behind the broadcast channel now gets a `DATA_LOSS` status that says how many updates it missed, so it can subscribe again. Before, it silently skipped the missed updates and panicked only after 9 lags in a row, with no message between them ([#401](https://github.com/solana-rpc/shipstern/pull/401) by @Estereg).
 - `shipstern-proc-macro`: `resolve_events_from_logs` no longer treats a `Program log:` line that ends in `success` or contains `failed:` as the end of an invocation, so later `Program data:` events of that program are kept. `shipstern-core` makes `log_messages::classify_log_line`, `LogLineKind` and `invoked_program` public ([#402](https://github.com/solana-rpc/shipstern/pull/402) by @Estereg).
 - `shipstern-solana-snapshot-source`: a stopped runtime ends the scan and the source returns `ReceiverDropped`. It used to log one error per account, finish the scan, and report `Completed` ([#403](https://github.com/solana-rpc/shipstern/pull/403) by @Estereg).
+- `shipstern`: `shipstern_transactions_successful` no longer counts the instruction pipelines a second time for a transaction whose instructions all succeed. Instruction pipelines count only in the `shipstern_instructions_*` metrics, and a failure to build a transaction's instruction tree now counts in `shipstern_instructions_parsing_errors` instead of `shipstern_transactions_parsing_errors` ([#405](https://github.com/solana-rpc/shipstern/pull/405) by @Estereg).
 
 ## [0.13.0] - 2026-11-12
 
