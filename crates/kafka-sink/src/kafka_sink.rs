@@ -791,6 +791,9 @@ impl AccountSlotSink {
 
 #[cfg(feature = "experimental-account-parser")]
 /// Produces account records immediately and advances a monotonic watermark by slot.
+///
+/// A watermark for a slot is emitted only once a later slot has started, so it always
+/// means that slot was fully written.
 pub struct AccountPassthroughSink {
     producer: Arc<FutureProducer>,
     account_slots_topic: String,
@@ -861,11 +864,13 @@ impl AccountPassthroughSink {
             }
         }
 
-        if let Some(slot) = current_slot {
-            self.emit_watermark_with_retry(slot).await?;
-        }
-
-        tracing::warn!("AccountPassthroughSink channel closed, shutting down");
+        // The channel closes on shutdown or an upstream error, so `current_slot` may be
+        // partial. A watermark for it would make a resume skip the rest of that slot.
+        tracing::warn!(
+            ?current_slot,
+            "AccountPassthroughSink channel closed, shutting down without a watermark for the \
+             in-progress slot"
+        );
         Ok(())
     }
 
@@ -1145,6 +1150,53 @@ mod tests {
         let expected: Vec<_> = records.iter().map(|r| r.key.clone()).collect();
 
         assert_eq!(consume_keys(&config.brokers, "committed", 3), expected);
+    }
+
+    #[cfg(feature = "experimental-account-parser")]
+    #[tokio::test]
+    async fn passthrough_close_does_not_mark_the_in_progress_slot_complete() {
+        let cluster = MockCluster::<DefaultProducerContext>::new(1).expect("mock cluster");
+
+        let config = KafkaSinkConfig {
+            brokers: cluster.bootstrap_servers(),
+            ..Default::default()
+        };
+
+        cluster
+            .create_topic(&config.account_slots_topic, 1, 1)
+            .expect("create topic");
+
+        let sink = AccountPassthroughSink::new(
+            Arc::new(create_producer(&config)),
+            config.account_slots_topic.clone(),
+            1,
+            0,
+        );
+
+        let (tx, rx) = mpsc::channel(8);
+
+        for slot in [10, 10, 11] {
+            tx.send(AccountMsg::Record {
+                slot,
+                record: None,
+                had_error: false,
+            })
+            .await
+            .expect("send");
+        }
+
+        drop(tx);
+
+        sink.run(rx).await.expect("sink run");
+
+        let last = crate::read_last_committed_account_block(&config)
+            .expect("read watermark")
+            .expect("a watermark");
+
+        assert_eq!(
+            last.slot, 10,
+            "slot 11 was still in progress when the channel closed"
+        );
     }
 
     fn record(topic: &str, kind: RecordKind, is_decoded: bool) -> PreparedRecord {
