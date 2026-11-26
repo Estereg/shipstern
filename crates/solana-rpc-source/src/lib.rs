@@ -335,8 +335,8 @@ impl SourceTrait for SolanaAccountsRpcSource {
                                 })?;
                             let OptionalContext::Context(response) = response else {
                                 return Err(TaskStop::Failed(format!(
-                                    "The RPC server sent no context slot for source: \
-                                     solana-rpc, filter: {filter_id}"
+                                    "The RPC server sent no context slot for source: solana-rpc, \
+                                     filter: {filter_id}"
                                 )));
                             };
                             let slot = response.context.slot;
@@ -369,7 +369,10 @@ impl SourceTrait for SolanaAccountsRpcSource {
                     tasks_set.spawn(async move {
                         for chunk in keys.chunks(MAX_MULTIPLE_ACCOUNTS) {
                             let response = client
-                                .get_multiple_ui_accounts_with_config(chunk, account_config(client.commitment()))
+                                .get_multiple_ui_accounts_with_config(
+                                    chunk,
+                                    account_config(client.commitment()),
+                                )
                                 .await
                                 .map_err(|e| {
                                     format!(
