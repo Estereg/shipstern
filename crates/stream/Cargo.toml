@@ -16,7 +16,6 @@ clap = { workspace = true, features = [
   "derive",
   "std",
 ] }
-futures-channel = { workspace = true, features = ["sink"] }
 futures-util = { workspace = true, features = ["sink"] }
 prometheus = { workspace = true, features = ["push"], optional = true }
 toml = { workspace = true }
