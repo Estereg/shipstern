@@ -1385,7 +1385,7 @@ mod tests {
             Some(Backoff::new(backoff, 1.0, 5)),
             filters_owned_by(1),
             tx,
-            Some(filters_rx),
+            Some(filters_rx.into()),
             open,
         );
         let dropper = async move {
