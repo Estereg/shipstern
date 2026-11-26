@@ -6350,6 +6350,7 @@ dependencies = [
  "solana-rpc-client-api",
  "solana-signature",
  "solana-transaction-status",
+ "tempfile",
  "yellowstone-grpc-proto",
 ]
 
