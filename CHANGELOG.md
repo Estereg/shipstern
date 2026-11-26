@@ -60,6 +60,7 @@ and adheres to [Semantic Versioning](https://semver.org/).
 - `shipstern-proc-macro`: a number field with `endian: be` is read big-endian, whether plain, optional, repeated or fixed-array. Before, it decoded byte-swapped with no error ([#438](https://github.com/solana-rpc/shipstern/pull/438) by @Estereg).
 - `shipstern-proc-macro`: a large fixed-size byte field, up to the 10 MiB Codama allows, is read into a heap buffer. Before, it was built on the stack, so a multi-MiB field aborted the process with a stack overflow ([#440](https://github.com/solana-rpc/shipstern/pull/440) by @Estereg).
 - `shipstern-proc-macro`: a numeric CPI event envelope constant is matched at the full width of its declared type. Before, a `u16`, `u32` or `u64` constant was cut to its first byte, so any inner instruction that began with that byte passed as the envelope ([#441](https://github.com/solana-rpc/shipstern/pull/441) by @Estereg).
+- **Breaking** for command lines that passed positional arguments: `shipstern-yellowstone-fumarole-source`: `FumaroleConfig` reads its fields from `--endpoint`, `--subscriber-name` and the other named flags, or from their environment variables, like the gRPC source. Before, clap took them as positional arguments, and a debug build panicked when it built the command line ([#445](https://github.com/solana-rpc/shipstern/pull/445) by @Estereg).
 
 ## [0.13.0] - 2026-11-12
 
