@@ -6,7 +6,10 @@ use std::{
 
 use agave_fs::io_setup::IoSetupState;
 use agave_snapshots::{snapshot_config::SnapshotConfig, SnapshotKind, SnapshotVersion};
-use shipstern::sources::{FromConfig, SourceContext, SourceExitStatus, SourceTrait};
+use shipstern::{
+    sources::{FromConfig, SourceContext, SourceExitStatus, SourceTrait},
+    Error as ShipsternError,
+};
 use shipstern_core::{Filters, Prefilter};
 use shipstern_solana_snapshot_source::{
     SolanaSnapshot, SolanaSnapshotConfig, SolanaSnapshotSource,
@@ -276,6 +279,21 @@ async fn a_receiver_dropped_mid_scan_is_receiver_dropped() {
 
     assert!(
         matches!(result, Ok(SourceExitStatus::ReceiverDropped)),
+        "got {result:?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_zero_channel_size_is_a_config_error() {
+    let source = source_for(Path::new("/nonexistent"), 0);
+    let (tx, _rx) = mpsc::channel(8);
+
+    let result = source
+        .connect(SourceContext::new(system_owned_accounts(), tx))
+        .await;
+
+    assert!(
+        matches!(result, Err(ShipsternError::ConfigError)),
         "got {result:?}"
     );
 }
