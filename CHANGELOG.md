@@ -10,6 +10,7 @@ and adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - `shipstern-spl-token-extensions-parser`: parses the Token-2022 scaled UI amount (`ScaledUiAmountExtension`) instructions, initialize and update multiplier, as the `TokenExtensionProgram` oneof variant `scaled_ui_amount`. Before, they failed with a parse error ([#414](https://github.com/solana-rpc/shipstern/pull/414) by @Estereg).
+- `shipstern-spl-token-extensions-parser`: parses the Token-2022 pausable (`PausableExtension`) instructions, initialize, pause and resume, as the `TokenExtensionProgram` oneof variant `pausable`. Before, they failed with a parse error ([#415](https://github.com/solana-rpc/shipstern/pull/415) by @Estereg).
 
 ### Changed
 
