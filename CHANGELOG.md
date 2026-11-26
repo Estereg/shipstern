@@ -56,6 +56,7 @@ and adheres to [Semantic Versioning](https://semver.org/).
 - `shipstern-solana-rpc-source`: each account carries the slot the RPC server read it at (the response's context slot) and not the slot from a `getSlot` call made before the request, which the request no longer makes ([#435](https://github.com/solana-rpc/shipstern/pull/435) by @Estereg).
 - `shipstern-solana-rpc-source`: the first failing owner aborts the other owners' requests, and a stopped runtime returns `ReceiverDropped` instead of an error ([#436](https://github.com/solana-rpc/shipstern/pull/436) by @Estereg).
 - `shipstern-proc-macro`: a `shortU16` struct field (plain, optional, repeated or fixed-array) is read as the 1 to 3 byte compact-u16 it is on the wire, not as a 2-byte `u16`. Before, every field after it decoded from the wrong offset ([#437](https://github.com/solana-rpc/shipstern/pull/437) by @Estereg).
+- `shipstern-proc-macro`: a number field with `endian: be` is read big-endian, whether plain, optional, repeated or fixed-array. Before, it decoded byte-swapped with no error ([#438](https://github.com/solana-rpc/shipstern/pull/438) by @Estereg).
 
 ## [0.13.0] - 2026-11-12
 
