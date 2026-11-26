@@ -13,7 +13,6 @@ async-trait = { workspace = true }
 clap = { workspace = true, features = ["env", "derive", "std"] }
 crossbeam-channel = { workspace = true }
 futures-util = { workspace = true, features = ["sink"] }
-opentelemetry = { workspace = true, features = ["metrics"], optional = true }
 prometheus = { workspace = true, features = ["push"], optional = true }
 serde = { workspace = true, features = ["derive"] }
 smallvec = { workspace = true }
@@ -32,7 +31,6 @@ yellowstone-grpc-proto = { workspace = true }
 
 [features]
 default = []
-opentelemetry = ["dep:opentelemetry"]
 prometheus = ["dep:prometheus"]
 
 [[test]]

@@ -18,10 +18,9 @@ borsh = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 clap = { workspace = true, features = ["derive", "cargo", "wrap_help"] }
 prost = { workspace = true, optional = true }
-prost-types = { workspace = true, optional = true }
 
 [features]
-proto = ["dep:shipstern-proto", "dep:prost", "dep:prost-types"]
+proto = ["dep:shipstern-proto", "dep:prost"]
 
 [dev-dependencies]
 serde_json.workspace = true
