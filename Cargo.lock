@@ -6474,6 +6474,7 @@ dependencies = [
 name = "shipstern-stream"
 version = "0.13.0"
 dependencies = [
+ "async-trait",
  "clap",
  "futures-util",
  "prometheus",
