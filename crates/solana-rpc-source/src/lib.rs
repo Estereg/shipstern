@@ -20,6 +20,16 @@ use yellowstone_grpc_proto::geyser::{
     SubscribeUpdateAccountInfo,
 };
 
+/// Why one fetch task stopped the source.
+enum TaskStop {
+    ReceiverDropped,
+    Failed(String),
+}
+
+impl From<String> for TaskStop {
+    fn from(msg: String) -> Self { Self::Failed(msg) }
+}
+
 /// A `Source` implementation for the Solana Accounts RPC API.
 #[derive(Debug)]
 pub struct SolanaAccountsRpcSource {
@@ -109,10 +119,10 @@ impl SourceTrait for SolanaAccountsRpcSource {
                                 )
                             })?;
                         let OptionalContext::Context(response) = response else {
-                            return Err(format!(
+                            return Err(TaskStop::Failed(format!(
                                 "The RPC server sent no context slot for source: solana-rpc, \
                                  filter: {filter_id}"
-                            ));
+                            )));
                         };
                         let slot = response.context.slot;
 
@@ -130,10 +140,10 @@ impl SourceTrait for SolanaAccountsRpcSource {
                             })?;
 
                             let Some(data) = account.data.decode() else {
-                                return Err(format!(
+                                return Err(TaskStop::Failed(format!(
                                     "Failed to decode account data for {acc_pubkey} from source: \
                                      solana-rpc, filter: {filter_id}"
-                                ));
+                                )));
                             };
                             let acc_pubkey = Pubkey::from_str(&acc_pubkey).map_err(|e| {
                                 format!(
@@ -162,54 +172,55 @@ impl SourceTrait for SolanaAccountsRpcSource {
                                 })),
                             };
 
-                            let res = tx.send(Ok(update)).await;
-
-                            if res.is_err() {
-                                return Err(format!(
-                                    "Failed to send update to buffer for source: solana-rpc, \
-                                     filter: {filter_id}"
-                                ));
+                            if tx.send(Ok(update)).await.is_err() {
+                                return Err(TaskStop::ReceiverDropped);
                             }
                         }
 
-                        Ok::<(), String>(())
+                        Ok::<(), TaskStop>(())
                     });
                 }
             }
         }
 
         // One task runs per (filter, owner) pair and the runtime treats a source
-        // `Err` as fatal, so the first failure wins: keeping later errors adds
-        // nothing, and updates already sent by sibling tasks stay in the buffer.
-        let mut first_error: Option<String> = None;
+        // `Err` as fatal, so the first stop wins and aborts the siblings. Updates
+        // already sent stay in the buffer.
+        let mut stop: Option<TaskStop> = None;
 
         while let Some(task_result) = tasks_set.join_next().await {
-            let msg = match task_result {
+            if stop.is_some() {
+                continue;
+            }
+
+            let reason = match task_result {
                 Ok(Ok(())) => continue,
-                Ok(Err(msg)) => {
+                Ok(Err(TaskStop::ReceiverDropped)) => TaskStop::ReceiverDropped,
+                Ok(Err(TaskStop::Failed(msg))) => {
                     tracing::error!(%msg, "Solana RPC source task failed");
-                    msg
+                    TaskStop::Failed(msg)
                 },
                 Err(e) => {
                     tracing::error!(err = %e, "Solana RPC source task panicked or was cancelled");
-                    e.to_string()
+                    TaskStop::Failed(e.to_string())
                 },
             };
 
-            first_error.get_or_insert(msg);
+            tasks_set.abort_all();
+            stop = Some(reason);
         }
 
-        if let Some(msg) = first_error {
-            return Err(ShipsternError::Other(msg.into()));
+        match stop {
+            Some(TaskStop::ReceiverDropped) => Ok(SourceExitStatus::ReceiverDropped),
+            Some(TaskStop::Failed(msg)) => Err(ShipsternError::Other(msg.into())),
+            None => Ok(SourceExitStatus::Completed),
         }
-
-        Ok(SourceExitStatus::Completed)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, time::Duration};
 
     use shipstern::{
         sources::{FromConfig, SourceContext, SourceExitStatus, SourceTrait},
@@ -398,5 +409,56 @@ mod tests {
         };
         assert_eq!(account.slot, CONTEXT_SLOT);
         assert_eq!(account.account.expect("account info").data, b"hi");
+    }
+
+    #[tokio::test]
+    async fn a_closed_receiver_is_receiver_dropped() {
+        let endpoint = serve(answer_one_account).await;
+        let (tx, rx) = mpsc::channel(4);
+        drop(rx);
+
+        let result = source_at(endpoint, 5)
+            .connect(SourceContext::new(filters_for(&[OWNER_A]), tx))
+            .await;
+
+        assert!(
+            matches!(result, Ok(SourceExitStatus::ReceiverDropped)),
+            "got {result:?}"
+        );
+    }
+
+    /// Owner A fails at once while owner B's request never gets an answer, so the run ends
+    /// in time only if the first failure aborts B.
+    #[tokio::test]
+    async fn the_first_failure_aborts_the_other_owners() {
+        fn fail_a_hang_b(body: &str) -> Option<String> {
+            if body.contains("getSlot") {
+                return Some(r#"{"jsonrpc":"2.0","id":1,"result":5}"#.to_string());
+            }
+            if body.contains(&Pubkey::new_from_array(OWNER_A).to_string()) {
+                return Some(
+                    r#"{"jsonrpc":"2.0","id":1,"error":{"code":-32000,"message":"boom"}}"#
+                        .to_string(),
+                );
+            }
+
+            None
+        }
+
+        let endpoint = serve(fail_a_hang_b).await;
+        let (tx, _rx) = mpsc::channel(4);
+        let source = source_at(endpoint, 60);
+
+        let result = tokio::time::timeout(
+            Duration::from_secs(10),
+            source.connect(SourceContext::new(filters_for(&[OWNER_A, OWNER_B]), tx)),
+        )
+        .await
+        .expect("the failing owner aborts the one that waits on the server");
+
+        let Err(shipstern::Error::Other(err)) = result else {
+            panic!("expected a connect error, got {result:?}");
+        };
+        assert!(err.to_string().contains("boom"), "got {err}");
     }
 }

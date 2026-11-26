@@ -54,6 +54,7 @@ and adheres to [Semantic Versioning](https://semver.org/).
 - `shipstern-solana-snapshot-source`: the bank load no longer holds a runtime worker for its minutes of blocking work ([#432](https://github.com/solana-rpc/shipstern/pull/432) by @Estereg).
 - `shipstern-jetstream-source`: a stopped runtime stops the replay and the source returns `ReceiverDropped`. The firehose retries a failed callback with no limit, so a closed channel kept it downloading and `connect` never returned ([#433](https://github.com/solana-rpc/shipstern/pull/433) by @Estereg).
 - `shipstern-solana-rpc-source`: each account carries the slot the RPC server read it at (the response's context slot) and not the slot from a `getSlot` call made before the request, which the request no longer makes ([#435](https://github.com/solana-rpc/shipstern/pull/435) by @Estereg).
+- `shipstern-solana-rpc-source`: the first failing owner aborts the other owners' requests, and a stopped runtime returns `ReceiverDropped` instead of an error ([#436](https://github.com/solana-rpc/shipstern/pull/436) by @Estereg).
 
 ## [0.13.0] - 2026-11-12
 
