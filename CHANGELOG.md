@@ -11,6 +11,7 @@ and adheres to [Semantic Versioning](https://semver.org/).
 
 - **Breaking** `shipstern-proc-macro` and the instruction parser crates: instruction parsers select their program with `transaction_accounts_include`, not `transaction_accounts`. The runtime merges all instruction parsers into one filter, so it received only transactions that touched every program. Include keys merged into `InstructionPipeline::ID` now widen it ([#395](https://github.com/solana-rpc/shipstern/pull/395), from #340 by @hack-wrench and @senzenn).
 - `shipstern`: a bundled `FilterPipeline` also checks its transaction filter in the client and skips a transaction that the filter rejects, on every source. The check drops a false cuckoo match, and a filter update through `RuntimeHandle` does not change it. `DynPipeline::client_filter` is new and returns `None` by default ([#395](https://github.com/solana-rpc/shipstern/pull/395) by @senzenn).
+- `shipstern-stream`: the per-message allocation in the response stream is gone, since it now wraps tokio's `BroadcastStream` ([#401](https://github.com/solana-rpc/shipstern/pull/401) by @Estereg).
 
 ### Fixed
 
@@ -18,6 +19,7 @@ and adheres to [Semantic Versioning](https://semver.org/).
 - `shipstern-yellowstone-grpc-source` and `shipstern-block-coordinator`'s `CoordinatorSource`: the client sends an HTTP/2 keepalive ping every 30 idle seconds and closes a connection that does not answer it in 10 seconds, and TCP keepalive starts probing after 30 idle seconds. Before, a half-open connection left the stream waiting forever, with no reconnect and no error ([#397](https://github.com/solana-rpc/shipstern/pull/397) by @Estereg).
 - `shipstern-proc-macro`: an IDL whose instruction, account or event names fold to the same generated identifier (`ABC` and `Abc`, or `_abc` and `abc`) now fails at expansion with a `compile_error!` naming both entries, instead of duplicate-definition errors inside generated code ([#398](https://github.com/solana-rpc/shipstern/pull/398) closing [#297](https://github.com/solana-rpc/shipstern/issues/297) by @Estereg).
 - `shipstern-spl-token-parser`: a parsed `Multisig` account lists only its first `n` signers. Before, it listed all 11 slots of the fixed array, so the unused ones showed as default keys ([#399](https://github.com/solana-rpc/shipstern/pull/399) by @Estereg).
+- `shipstern-stream`: a client that falls behind the broadcast channel now gets a `DATA_LOSS` status that says how many updates it missed, so it can subscribe again. Before, it silently skipped the missed updates and panicked only after 9 lags in a row, with no message between them ([#401](https://github.com/solana-rpc/shipstern/pull/401) by @Estereg).
 
 ## [0.13.0] - 2026-11-12
 
