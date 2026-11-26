@@ -47,6 +47,7 @@ and adheres to [Semantic Versioning](https://semver.org/).
 - **Breaking** for exhaustive matches: `shipstern-block-coordinator`'s `ParseStatsKind` gains `AccountErrorFallback`. It updates the failed counter of a slot without counting the account as processed again, for an account that already arrived as a parsed fallback record ([#425](https://github.com/solana-rpc/shipstern/pull/425) by @Estereg).
 - `shipstern-kafka-sink`: `AccountPassthroughSink` no longer emits a watermark for the slot in progress when its channel closes. The channel closes on shutdown or an upstream error, so that slot can be partial, and a resume from its watermark skipped the rest of it. The last slot is now written again after a restart ([#426](https://github.com/solana-rpc/shipstern/pull/426) by @Estereg).
 - `shipstern-kafka-sink`: the sinks run the blocking librdkafka transaction calls (`init`, `begin`, `commit` and `abort`; `init`, `commit` and `abort` block up to `transaction_timeout_ms`, and `begin` is moved too) on the blocking thread pool. Before, each one held a Tokio worker for its whole timeout, which stalled other tasks on that worker during a slow commit ([#427](https://github.com/solana-rpc/shipstern/pull/427) by @Estereg).
+- `shipstern`: the `_successful` metrics no longer count an update a parser filtered out, so `shipstern_instructions_successful`, `shipstern_transactions_successful` and the other kinds count only updates a parser parsed and its handlers ran ([#428](https://github.com/solana-rpc/shipstern/pull/428) by @Estereg).
 
 ## [0.13.0] - 2026-11-12
 
