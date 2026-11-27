@@ -89,6 +89,7 @@ and adheres to [Semantic Versioning](https://semver.org/).
 - `shipstern-proc-macro`: a defined-type enum with no variants stops the build with a message that names the enum. Before, the macro panicked on an index with the `proto` feature, and without it generated a `match` with no arms that failed with E0004 ([#477](https://github.com/solana-rpc/shipstern/pull/477) by @Estereg).
 - `shipstern-stream`: `SubscribeMany` subscribes once to each distinct program. A request that listed a program twice received every update from it twice ([#478](https://github.com/solana-rpc/shipstern/pull/478) by @Estereg).
 - `shipstern-yellowstone-grpc-source` and `shipstern-block-coordinator`'s `CoordinatorSource`: the client sends an HTTP/2 keepalive ping every 10 idle seconds and closes a connection that does not answer it in 10 seconds, and TCP keepalive starts probing after 10 idle seconds. Before, a half-open connection left the stream waiting forever, with no reconnect and no error ([#397](https://github.com/solana-rpc/shipstern/pull/397) by @Estereg).
+- `shipstern-jetstream-source`: a block with entries lists each entry once when the firehose streams a slot again after an error. The buffer kept the first pass, so some entries appeared twice ([#484](https://github.com/solana-rpc/shipstern/pull/484) by @Estereg).
 
 ## [0.13.0] - 2026-11-12
 
