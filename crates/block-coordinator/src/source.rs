@@ -28,8 +28,8 @@ use crate::{fixtures::FixtureWriter, types::CoordinatorInput};
 
 const DEFAULT_STREAM_IDLE_WARN_SECS: u64 = 0;
 
-/// Same keepalive as `YellowstoneGrpcSource`: ping after 30 idle seconds, close after 10 more.
-const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(30);
+/// Same keepalive as `YellowstoneGrpcSource`: ping after 10 idle seconds, close after 10 more.
+const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(10);
 const KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(10);
 
 const fn default_stream_idle_warn_secs() -> u64 { DEFAULT_STREAM_IDLE_WARN_SECS }

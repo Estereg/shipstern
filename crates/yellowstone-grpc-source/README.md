@@ -204,11 +204,11 @@ so run it under a supervisor that restarts it.
 
 **Keepalive.** A connection that goes half-open (a dropped route, an expired NAT
 entry) sends no error, so a stream would wait forever and never reconnect. The
-source sends an HTTP/2 keepalive ping after 30 idle seconds and closes the
+source sends an HTTP/2 keepalive ping after 10 idle seconds and closes the
 connection when no answer comes in 10 seconds. That ends the stream, which then
 reconnects as above when the reconnect mode allows it; a processed stream with a
 `from_slot` or a `RuntimeHandle` ends the run instead. TCP keepalive also starts
-probing after 30 idle seconds; the OS sets the probe timing.
+probing after 10 idle seconds; the OS sets the probe timing.
 
 ## Banks at processed
 
