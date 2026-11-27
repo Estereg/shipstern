@@ -45,7 +45,7 @@ const fn default_auto_reconnect() -> bool { true }
 /// How long a connection may sit idle before the client pings it. A half-open connection
 /// (a dropped route, a NAT entry that expired) sends no error, so with no ping `stream.next()`
 /// waits forever and no reconnect starts.
-const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(30);
+const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(10);
 /// How long the client waits for the answer to a ping before it closes the connection.
 const KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(10);
 
