@@ -207,13 +207,18 @@ client subscribes again can also lose its first updates, with no error
 A processed stream with a `from_slot` or a `RuntimeHandle` does not reconnect,
 so run it under a supervisor that restarts it.
 
-**Keepalive.** A connection that goes half-open (a dropped route, an expired NAT
-entry) sends no error, so a stream would wait forever and never reconnect. The
-source sends an HTTP/2 keepalive ping after 10 idle seconds and closes the
-connection when no answer comes in 10 seconds. That ends the stream, which then
-reconnects as above when the reconnect mode allows it; a processed stream with a
-`from_slot` or a `RuntimeHandle` ends the run instead. TCP keepalive also starts
-probing after 10 idle seconds; the OS sets the probe timing.
+**Keepalive and idle timeout.** Neither has a config field.
+
+- In every mode, the client sends an HTTP/2 ping when it reads nothing for 10 s.
+  It drops the connection if the ping gets no answer in 10 s, so a dead
+  connection ends the stream.
+- In the slot checkpoint mode, a stream that sends nothing but pings for 30 s
+  counts as lost, and the source subscribes again from the checkpoint. A ping
+  or a pong does not count as an update, but an update that the source drops
+  does. Time spent on a full channel does not count. The other modes have no
+  idle timeout.
+- `CoordinatorSource` builds its own client with the same keepalive, so a dead
+  connection ends its run with an error. It has no idle timeout.
 
 ## Banks at processed
 
