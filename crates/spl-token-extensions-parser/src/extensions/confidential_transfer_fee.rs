@@ -56,7 +56,7 @@ pub struct EnableHarvestToMintAccounts {
 #[shipstern]
 #[derive(Clone, PartialEq)]
 pub struct DisableHarvestToMintAccounts {
-    pub account: Pubkey,
+    pub mint: Pubkey,
     pub confidential_transfer_fee_authority: Pubkey,
     pub multisig_signers: Vec<Pubkey>,
 }
@@ -234,7 +234,7 @@ impl ExtensionInstructionParser for ConfidentialTransferFeeIx {
 
                 oneof::Instruction::DisableHarvestToMint(oneof::DisableHarvestToMint {
                     accounts: DisableHarvestToMintAccounts {
-                        account: crate::Pubkey::new(ix.accounts[0].0),
+                        mint: crate::Pubkey::new(ix.accounts[0].0),
                         confidential_transfer_fee_authority: crate::Pubkey::new(ix.accounts[1].0),
                         multisig_signers: ix.accounts[2..]
                             .iter()
@@ -334,5 +334,46 @@ mod tests {
     #[test]
     fn withdraw_from_accounts_without_an_authority_is_rejected() {
         assert!(parse_withdraw_from_accounts(0, &[1, 2, 3]).is_err());
+    }
+
+    /// The processor reads the mint first, then the authority.
+    #[test]
+    fn disable_harvest_to_mint_reads_the_mint() {
+        use spl_token_2022::extension::confidential_transfer_fee::instruction::disable_harvest_to_mint;
+
+        let mint = solana_pubkey::Pubkey::new_from_array([1; 32]);
+        let authority = solana_pubkey::Pubkey::new_from_array([2; 32]);
+        let ix = disable_harvest_to_mint(&spl_token_2022::ID, &mint, &authority, &[]).unwrap();
+
+        let update = InstructionUpdate {
+            program: spl_token_2022::ID.to_bytes().into(),
+            accounts: ix
+                .accounts
+                .iter()
+                .map(|meta| meta.pubkey.to_bytes().into())
+                .collect(),
+            data: ix.data,
+            shared: Default::default(),
+            inner: vec![],
+            path: Path::new_single(0),
+            log_range: 0..0,
+        };
+
+        let parsed = ConfidentialTransferFeeIx::try_parse(&update).unwrap();
+        let Some(oneof::Instruction::DisableHarvestToMint(oneof::DisableHarvestToMint {
+            accounts,
+        })) = parsed.instruction
+        else {
+            panic!(
+                "expected DisableHarvestToMint, got {:?}",
+                parsed.instruction
+            );
+        };
+
+        assert_eq!(accounts.mint, crate::Pubkey::new(mint.to_bytes()));
+        assert_eq!(
+            accounts.confidential_transfer_fee_authority,
+            crate::Pubkey::new(authority.to_bytes())
+        );
     }
 }
